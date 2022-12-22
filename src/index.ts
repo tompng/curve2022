@@ -1,6 +1,6 @@
 import { Mesh } from 'three'
 import * as THREE from 'three'
-import { sphereRandom, CurveManager } from './tube'
+import { sphereRandom, Curve, CurveManager } from './tube'
 
 const renderer = new THREE.WebGLRenderer()
 const scene = new THREE.Scene()
@@ -35,8 +35,8 @@ window.onresize = () => {
     resetSize()
   }, 1000)
 }
-
-for (let i = 0; i < 5; i++) {
+const added: Curve[] = []
+for (let i = 0; i < 10; i++) {
   const curve = curves.use()
   const v = sphereRandom()
   curve.p.x = 0
@@ -45,14 +45,14 @@ for (let i = 0; i < 5; i++) {
   curve.v.x = v.x
   curve.v.y = v.y
   curve.v.z = v.z
-  curve.color.setRGB(0.1, 0.1, 0.3)
+  curve.color.setRGB(0.6 * Math.random(), 0.6 * Math.random(), 1)
   curve.brightness0 = 0
-  curve.brightness1 = 10
-  curve.brightness2 = 0
-  curve.friction = 1
-  curve.time = 0.1
+  curve.brightness1 = 2
+  curve.brightness2 = -1
+  curve.ra = 0.002
+  curve.rb = 0.004
+  added.push(curve)
 }
-const focusPosition = { x: 0, y: 0, z: 0 }
 function animate() {
   requestAnimationFrame(animate)
   const t = performance.now() / 1000
@@ -65,7 +65,8 @@ function animate() {
   renderer.autoClear = false
   renderer.clearColor()
   renderer.clearDepth()
-  curves.update(camera.position, focusPosition)
+  for (const c of added) c.time = t
+  curves.update()
   renderer.render(scene, camera)
   renderer.setRenderTarget(null)
   renderer.render(targetRenderScene, targetRenderCamera)

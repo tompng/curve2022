@@ -2,46 +2,35 @@ import * as THREE from 'three'
 import { ShaderMaterial } from 'three'
 
 export type P3 = { x: number; y: number; z: number }
-const gravityZ = -9.8
-const wind = { x: 0.2, y: 0, z: 0 }
-
-export function positionAt(p: P3, v: P3, f: number, t: number) {
-  const e = Math.exp(-f * t)
-  return {
-    x: p.x + wind.x * t - (v.x - wind.x) * (e - 1) / f,
-    y: p.y + wind.y * t - (v.y - wind.y) * (e - 1) / f,
-    z: p.z + (wind.z + gravityZ / f) * t - (v.z - wind.z - gravityZ / f) * (e - 1) / f
-  }
-}
 
 const vertexShader = `
-uniform float ra, rb;
+uniform float ra, rb, time;
 uniform vec3 p, v;
-const vec3 gravity = vec3(0, 0, -9.8);
-uniform vec3 wind;
-uniform float time, friction;
 uniform float brightness0, brightness1, brightness2;
-varying float vBrightnessSum;
+varying float vBrightSum0, vBrightSum1, vBrightSum2, vBrightSum3, vT;
 void main() {
-  float t = position.z * time;
-  float e = exp(-friction * t);
-  vec3 wg = wind + gravity / friction;
-  vec3 gpos = p + wg * t - (v - wg) * (e - 1.0) / friction;
+  float t = position.z;
+  vec3 gpos = p + sin(10.0 * v * (t + time)) * 0.1 + 0.02 * sin(5.0 * v.yxz * (t - time));
   vec3 cpos = (viewMatrix * vec4(gpos, 1)).xyz;
-  cpos += vec3(position.xy, 0) * mix(ra, rb, position.z) / cpos.z;
-  gl_Position = projectionMatrix * vec4(cpos, 1);
-  // (b0+b1*t+b2*tt) * ((1-t/time)/ra/ra+t/time/rb/rb)
-  float sb = t * (brightness0 + t * (0.5 * brightness1 + t * brightness2 / 3.0));
-  float sbt = position.z * t * (0.5 * brightness0 + t * (brightness1 / 3.0 + 0.25 * t * brightness2));
-  vBrightnessSum = ((sb - sbt) / ra / ra + sbt / rb / rb);
+  float rainv2 = 1.0 / ra / ra;
+  float rbinv2 = 1.0 / rb / rb;
+  float r = sqrt(1.0 / mix(rainv2, rbinv2, t));
+  gl_Position = projectionMatrix * vec4(cpos.xy + position.xy * r / cpos.z, cpos.z, 1);
+  float rdinv2 = rbinv2 - rainv2;
+  vT = t;
+  vBrightSum0 = brightness0 * rainv2;
+  vBrightSum1 = (rainv2 * brightness1 + rdinv2 * brightness0) * 0.5;
+  vBrightSum2 = (rainv2 * brightness2 + rdinv2 * brightness1) / 3.0;
+  vBrightSum3 = (rdinv2 * brightness2) * 0.25;
 }
 `
 
 const fragmentShader = `
-varying float vBrightnessSum;
+varying float vBrightSum0, vBrightSum1, vBrightSum2, vBrightSum3, vT;
 uniform vec3 color;
 void main() {
-  gl_FragColor.rgb = (2.0 * float(gl_FrontFacing) - 1.0) * vBrightnessSum * color * 0.0001;
+  float brightnessSum = vT * (vBrightSum0 + vT * (vBrightSum1 + vT * (vBrightSum2 + vT * vBrightSum3)));
+  gl_FragColor.rgb = (2.0 * float(gl_FrontFacing) - 1.0) * brightnessSum * color * 0.0001;
   gl_FragColor.a = 1.0;
 }
 `
@@ -66,27 +55,25 @@ function cachedCylinderGeometry(lsec: number, rsec: number) {
 
 export class Curve {
   uniforms = {
-    wind: { value: new THREE.Vector3() },
     p: { value: new THREE.Vector3() },
     v: { value: new THREE.Vector3() },
     color: { value: new THREE.Color() },
     brightness0: { value: 0 },
     brightness1: { value: 0 },
     brightness2: { value: 0 },
-    friction: { value: 0 },
-    time: { value: 0 },
     ra: { value: 0 },
-    rb: { value: 0 }
+    rb: { value: 0 },
+    time: { value: 0 }
   }
   readonly p: THREE.Vector3
   readonly v: THREE.Vector3
   readonly color: THREE.Color
-  front = true
   brightness0 = 0
   brightness1 = 0
   brightness2 = 0
-  friction = 0
   time = 0
+  ra = 0
+  rb = 0
   mesh: THREE.Mesh
   constructor() {
     this.p = this.uniforms.p.value
@@ -102,23 +89,14 @@ export class Curve {
       depthWrite: false
     })
   }
-  update({ x, y, z }: { x: number; y: number; z: number }, focusDistance: number) {
-    function r(p: P3) {
-      const distance = Math.hypot(p.x - x, p.y - y, p.z - z)
-      return 0.0003 + Math.abs(distance - focusDistance) * 0.015 * distance
-    }
-    this.front = Math.hypot(this.p.x - x, this.p.y - y, this.p.z - z) < focusDistance
-    this.uniforms.wind.value.x = wind.x
-    this.uniforms.wind.value.y = wind.y
-    this.uniforms.wind.value.z = wind.z
-    this.uniforms.ra.value = r(this.p)
-    this.uniforms.rb.value = r(positionAt(this.p, this.v, this.friction, this.time))
-    this.uniforms.friction.value = this.friction
+  update() {
+    this.uniforms.ra.value = this.ra
+    this.uniforms.rb.value = this.rb
     this.uniforms.time.value = this.time
     this.uniforms.brightness0.value = this.brightness0
     this.uniforms.brightness1.value = this.brightness1
     this.uniforms.brightness2.value = this.brightness2
-    this.mesh.geometry = cachedCylinderGeometry(16, 12)
+    this.mesh.geometry = cachedCylinderGeometry(64, 6)
   }
 }
 
@@ -178,8 +156,7 @@ export class CurveManager {
     this.scene.add(curve.mesh)
     return curve
   }
-  update(camera: P3, focus: P3) {
-    const distance = Math.hypot(focus.x - camera.x, focus.y - camera.y, focus.z - camera.z)
-    for (let i = 0; i < this.activeCount; i++) this.curves[i].update(camera, distance)
+  update() {
+    for (let i = 0; i < this.activeCount; i++) this.curves[i].update()
   }
 }
