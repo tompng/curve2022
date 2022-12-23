@@ -3,27 +3,29 @@ import { ShaderMaterial } from 'three'
 
 export type P3 = { x: number; y: number; z: number }
 
-const vertexShader = `
-uniform float ra, rb, time;
-uniform vec3 p, v;
-uniform float brightness0, brightness1, brightness2;
-varying float vBrightSum0, vBrightSum1, vBrightSum2, vBrightSum3, vT;
-void main() {
-  float t = position.z;
-  vec3 gpos = p + sin(10.0 * v * (t + time)) * 0.1 + 0.02 * sin(5.0 * v.yxz * (t - time));
-  vec3 cpos = (viewMatrix * vec4(gpos, 1)).xyz;
-  float rainv2 = 1.0 / ra / ra;
-  float rbinv2 = 1.0 / rb / rb;
-  float r = sqrt(1.0 / mix(rainv2, rbinv2, t));
-  gl_Position = projectionMatrix * vec4(cpos.xy + position.xy * r / cpos.z, cpos.z, 1);
-  float rdinv2 = rbinv2 - rainv2;
-  vT = t;
-  vBrightSum0 = brightness0 * rainv2;
-  vBrightSum1 = (rainv2 * brightness1 + rdinv2 * brightness0) * 0.5;
-  vBrightSum2 = (rainv2 * brightness2 + rdinv2 * brightness1) / 3.0;
-  vBrightSum3 = (rdinv2 * brightness2) * 0.25;
+export function createVertexShader(gposCode: string) {
+  return `
+  uniform float ra, rb, time;
+  uniform vec3 params1, params2;
+  uniform float brightness0, brightness1, brightness2;
+  varying float vBrightSum0, vBrightSum1, vBrightSum2, vBrightSum3, vT;
+  void main() {
+    float t = position.z;
+    ${gposCode}
+    vec3 cpos = (viewMatrix * vec4(gpos, 1)).xyz;
+    float rainv2 = 1.0 / ra / ra;
+    float rbinv2 = 1.0 / rb / rb;
+    float r = sqrt(1.0 / mix(rainv2, rbinv2, t));
+    gl_Position = projectionMatrix * vec4(cpos.xy + position.xy * r / cpos.z, cpos.z, 1);
+    float rdinv2 = rbinv2 - rainv2;
+    vT = t;
+    vBrightSum0 = brightness0 * rainv2;
+    vBrightSum1 = (rainv2 * brightness1 + rdinv2 * brightness0) * 0.5;
+    vBrightSum2 = (rainv2 * brightness2 + rdinv2 * brightness1) / 3.0;
+    vBrightSum3 = (rdinv2 * brightness2) * 0.25;
+  }
+  `
 }
-`
 
 const fragmentShader = `
 varying float vBrightSum0, vBrightSum1, vBrightSum2, vBrightSum3, vT;
@@ -55,8 +57,8 @@ function cachedCylinderGeometry(lsec: number, rsec: number) {
 
 export class Curve {
   uniforms = {
-    p: { value: new THREE.Vector3() },
-    v: { value: new THREE.Vector3() },
+    params1: { value: new THREE.Vector3() },
+    params2: { value: new THREE.Vector3() },
     color: { value: new THREE.Color() },
     brightness0: { value: 0 },
     brightness1: { value: 0 },
@@ -65,8 +67,8 @@ export class Curve {
     rb: { value: 0 },
     time: { value: 0 }
   }
-  readonly p: THREE.Vector3
-  readonly v: THREE.Vector3
+  readonly params1: THREE.Vector3
+  readonly params2: THREE.Vector3
   readonly color: THREE.Color
   brightness0 = 0
   brightness1 = 0
@@ -75,9 +77,9 @@ export class Curve {
   ra = 0
   rb = 0
   mesh: THREE.Mesh
-  constructor() {
-    this.p = this.uniforms.p.value
-    this.v = this.uniforms.v.value
+  constructor(vertexShader: string) {
+    this.params1 = this.uniforms.params1.value
+    this.params2 = this.uniforms.params2.value
     this.color = this.uniforms.color.value
     this.mesh = new THREE.Mesh()
     this.mesh.material = new ShaderMaterial({
@@ -136,27 +138,23 @@ export function cylinderGeometry(lsections: number, rsections: number) {
 }
 
 export class CurveManager {
+  curvePool: Curve[] = []
   curves: Curve[] = []
-  activeCount = 0
-  constructor(public scene: THREE.Scene) {}
+  constructor(public scene: THREE.Scene, public vertexShader: string) {}
   reset() {
-    for (let i = 0; i < this.activeCount; i++) {
-      this.scene.remove(this.curves[i].mesh)
+    for (const curve of this.curves) {
+      this.scene.remove(curve.mesh)
+      this.curvePool.push(curve)
     }
-    this.activeCount = 0
+    this.curves.length = 0
   }
   use() {
-    const index = this.activeCount
-    this.activeCount++
-    let curve = this.curves[index]
-    if (!curve) {
-      curve = new Curve()
-      this.curves[index] = curve
-    }
+    const curve = this.curvePool.pop() || new Curve(this.vertexShader)
+    this.curves.push(curve)
     this.scene.add(curve.mesh)
     return curve
   }
   update() {
-    for (let i = 0; i < this.activeCount; i++) this.curves[i].update()
+    for (const curve of this.curves) curve.update()
   }
 }
