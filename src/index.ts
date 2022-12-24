@@ -136,10 +136,10 @@ function animate() {
     // sensor.referenceGravity.x = 0
     // sensor.referenceGravity.y = -1
     // sensor.referenceGravity.z = -4
-    const { x, y, z } = sensor.gravity
+    const { x, y, z } = sensor.smoothGravity
     const ref = sensor.referenceGravity
     const refZTheta = Math.atan2(Math.hypot(ref.x, ref.y), -ref.z)
-    const gravityZTheta = Math.atan(Math.hypot(x, y) / (-z))
+    const gravityZTheta = Math.atan2(Math.hypot(x, y), -z)
     cameraZTheta = gravityZTheta - refZTheta
     cameraZTheta = Math.max(-1, Math.min(cameraZTheta, 1))
     const safeRatio = 1 - (1 - (x ** 2 + y ** 2) / (x ** 2 + y ** 2 + z ** 2)) ** 16

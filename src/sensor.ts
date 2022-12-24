@@ -1,7 +1,7 @@
 export class GravitySensor {
   available = false
   gravity = { x: 0, y: 0, z: 0 }
-  referenceGravity = { x: 0, y: -1, z: 1 }
+  referenceGravity = { x: 0, y: -1, z: -1 }
   initialized = false
   button: HTMLElement
   smoothGravity = {
@@ -39,7 +39,7 @@ export class GravitySensor {
       this.gravity.x = scale * (x * cos - y * sin)
       this.gravity.y = scale * (x * sin + y * cos)
       this.gravity.z = z * scale
-      const ratioA = 0.9
+      const ratioA = 0.7
       const ratioB = ratioA ** 2
       const ratioC = ratioA ** 3
       this.smoothGravity.ax = (this.smoothGravity.ax + this.gravity.x) * ratioA
