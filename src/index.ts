@@ -126,13 +126,22 @@ scene.add(snow.points)
 
 let cameraZTheta = 0
 let cameraRotate = 0
+const bird = {
+  xyDir: 0,
+  zTheta: 0,
+  position: { x: -1, y: 0, z: 0.7 }
+}
 
+let prevTime = 0
 function animate() {
   requestAnimationFrame(animate)
+  const t = performance.now() / 1000
+  const dt = Math.max(0, Math.min(t - prevTime, 0.1))
+  prevTime = t
   if (sensor.available) {
-    // sensor.gravity.x = 1
-    // sensor.gravity.y = -1
-    // sensor.gravity.z = -4
+    // sensor.smoothGravity.x = 0.4
+    // sensor.smoothGravity.y = -1
+    // sensor.smoothGravity.z = -4
     // sensor.referenceGravity.x = 0
     // sensor.referenceGravity.y = -1
     // sensor.referenceGravity.z = -4
@@ -144,21 +153,30 @@ function animate() {
     cameraZTheta = Math.max(-1, Math.min(cameraZTheta, 1))
     const safeRatio = 1 - (1 - (x ** 2 + y ** 2) / (x ** 2 + y ** 2 + z ** 2)) ** 16
     cameraRotate = -(Math.atan2(y, x) + Math.PI / 2) * safeRatio
+    const speed = 0.1
+    bird.position.x += dt * speed * Math.cos(bird.xyDir) * Math.cos(bird.zTheta)
+    bird.position.y += dt * speed * Math.sin(bird.xyDir) * Math.cos(bird.zTheta)
+    bird.position.z += dt * speed * Math.sin(bird.zTheta)
+    bird.position.z = Math.max(0.1, Math.min(bird.position.z, 4))
+    const r = Math.hypot(bird.position.x, bird.position.y)
+    bird.xyDir += cameraRotate * dt / 2
+    if (r > 16) {
+      const scale = 16 / r
+      bird.position.x *= scale
+      bird.position.y *= scale
+    }
+  } else {
+    const th = t * 0.4
+    bird.position.x = Math.cos(th)
+    bird.position.y = Math.sin(th)
+    bird.position.z = 0.7
+    bird.xyDir = th + Math.PI
   }
-  const t = performance.now() / 1000
-  const zth = Math.sin(t)*0
-  const distance = 1
-  const th = t * 0.4
-  const positionX = distance * Math.cos(th) * Math.cos(zth)
-  const positionY = distance * Math.sin(th) * Math.cos(zth)
-  const positionZ = 0.7
-  const dirX = -Math.cos(th)
-  const dirY = -Math.sin(th)
   const camDistance = 0.1
-  camera.position.x = positionX - dirX * camDistance * Math.cos(cameraZTheta)
-  camera.position.y = positionY - dirY * camDistance * Math.cos(cameraZTheta)
-  camera.position.z = positionZ - camDistance * Math.sin(cameraZTheta)
-  camera.lookAt(new THREE.Vector3(positionX, positionY, positionZ))
+  camera.position.x = bird.position.x - Math.cos(bird.xyDir) * camDistance * Math.cos(cameraZTheta)
+  camera.position.y = bird.position.y - Math.sin(bird.xyDir) * camDistance * Math.cos(cameraZTheta)
+  camera.position.z = bird.position.z - camDistance * Math.sin(cameraZTheta)
+  camera.lookAt(new THREE.Vector3(bird.position.x, bird.position.y, bird.position.z))
   camera.rotateZ(cameraRotate)
   renderer.setRenderTarget(target)
   renderer.autoClear = false
