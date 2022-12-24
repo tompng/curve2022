@@ -76,17 +76,17 @@ for (let i = 0; i < 20; i++) {
   const curve = treeLeaf.use()
   curve.color.setRGB(0.8 * Math.random(), 1, 0.8 * Math.random())
   curve.brightness0 = 0
-  curve.brightness1 = 8
-  curve.brightness2 = -4
+  curve.brightness1 = 32
+  curve.brightness2 = -16
   curve.ra = 0.02
   curve.rb = 0.01
 }
 for (let i = 0; i < 10; i++) {
   const curve = treeTrunk.use()
   curve.color.setRGB(1, 0.6 * Math.random(), 0.6 * Math.random())
-  curve.brightness0 = 2
+  curve.brightness0 = 4
   curve.brightness1 = 0
-  curve.brightness2 = -2
+  curve.brightness2 = -4
   curve.ra = 0.05
   curve.rb = 0.005
 }
@@ -95,8 +95,8 @@ for (let i = 0; i < 3; i++) {
   const curve = star.use()
   curve.color.setRGB(1, 1, 0.6 * Math.random())
   curve.brightness0 = 0
-  curve.brightness1 = 32
-  curve.brightness2 = -32
+  curve.brightness1 = 64
+  curve.brightness2 = -64
   curve.ra = 0.01
   curve.rb = 0.01
 }
@@ -112,8 +112,8 @@ for (let i = 0; i < 20; i++) {
   curve.params1.z = (0.2 + 0.8 * Math.random()) * randomSign()
   curve.params2.z = (0.2 + 0.8 * Math.random()) * randomSign()
   curve.brightness0 = 0
-  curve.brightness1 = 64
-  curve.brightness2 = -64
+  curve.brightness1 = 128
+  curve.brightness2 = -128
   curve.ra = 0.02
   curve.rb = 0.02
 }
