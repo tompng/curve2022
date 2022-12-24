@@ -2,6 +2,9 @@ import { Mesh } from 'three'
 import * as THREE from 'three'
 import { CurveManager, createVertexShader } from './tube'
 
+function randomSign(): -1 | 1 {
+  return Math.random() < 0.5 ? -1 : 1
+}
 const renderer = new THREE.WebGLRenderer()
 const scene = new THREE.Scene()
 let camera = new THREE.Camera()
@@ -43,6 +46,8 @@ const treeLeaf = new CurveManager(scene, createVertexShader(`
   ) + 0.04 * (sin(37.0 * params2 * t + 0.5 * params1 * time) - sin(59.0 * params1.yzx * t + 0.3 * params2.zxy * time));
   gpos.z += 0.7;
   gpos.xy *= 1.2 - gpos.z;
+  float max = 1.2;
+  gpos.z = (max + gpos.z - sqrt(0.01 + (max - gpos.z) * (max - gpos.z))) * 0.5;
 `))
 const treeTrunk = new CurveManager(scene, createVertexShader(`
   vec3 gpos = vec3(
@@ -55,6 +60,16 @@ const star = new CurveManager(scene, createVertexShader(`
   gpos /= 0.5 + length(gpos);
   gpos *= 0.1;
   gpos.z += 1.2;
+`))
+const ground = new CurveManager(scene, createVertexShader(`
+  vec2 a = vec2(params1.z, params2.z);
+  vec3 gpos = vec3(
+    params1.xy * t + params2.xy * (1.0 - t) + 0.1 * vec2(
+      dot(sin(32.0 * a * t + a.x), a.xy),
+      dot(sin(32.0 * a * t + a.y), a.yx)
+    ),
+    0
+  );
 `))
 
 for (let i = 0; i < 20; i++) {
@@ -86,6 +101,23 @@ for (let i = 0; i < 3; i++) {
   curve.rb = 0.01
 }
 
+for (let i = 0; i < 20; i++) {
+  const t = i / 19
+  const curve = ground.use()
+  curve.color.setRGB(1, 1, 1)
+  curve.params1.x = -2
+  curve.params1.y = -2 + 4 * t
+  curve.params2.x = -curve.params1.x
+  curve.params2.y = curve.params1.y
+  curve.params1.z = (0.2 + 0.8 * Math.random()) * randomSign()
+  curve.params2.z = (0.2 + 0.8 * Math.random()) * randomSign()
+  curve.brightness0 = 0
+  curve.brightness1 = 64
+  curve.brightness2 = -64
+  curve.ra = 0.02
+  curve.rb = 0.02
+}
+
 function animate() {
   requestAnimationFrame(animate)
   const t = performance.now() / 1000
@@ -103,6 +135,7 @@ function animate() {
   star.update(t)
   treeLeaf.update(t)
   treeTrunk.update(t)
+  ground.update(t)
   renderer.render(scene, camera)
   renderer.setRenderTarget(null)
   renderer.render(targetRenderScene, targetRenderCamera)

@@ -16,7 +16,7 @@ export function createVertexShader(gposCode: string) {
     float rainv2 = 1.0 / ra / ra;
     float rbinv2 = 1.0 / rb / rb;
     float r = sqrt(1.0 / mix(rainv2, rbinv2, t));
-    gl_Position = projectionMatrix * vec4(cpos.xy + position.xy * r / cpos.z, cpos.z, 1);
+    gl_Position = projectionMatrix * vec4(cpos.xy + position.xy * r, cpos.z, 1);
     float rdinv2 = rbinv2 - rainv2;
     vT = t;
     vBrightSum0 = brightness0 * rainv2;
