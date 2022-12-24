@@ -18,8 +18,7 @@ function resetSize() {
   camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 100)
 }
 resetSize()
-const theCode = 'vec3 gpos = params1 + sin(10.0 * params2 * (t + time)) * 0.1 + 0.02 * sin(5.0 * params2.yxz * (4.0 * t - time));'
-const curveManager = new CurveManager(scene, createVertexShader(theCode))
+
 camera.up = new THREE.Vector3(0, 0, 1)
 document.body.appendChild(renderer.domElement)
 const targetRenderMesh = new Mesh(new THREE.PlaneGeometry(), new THREE.MeshBasicMaterial({ map: target.texture }))
@@ -36,15 +35,21 @@ window.onresize = () => {
     resetSize()
   }, 200)
 }
+
+const curveManager = new CurveManager(scene, createVertexShader(
+  'vec3 gpos = sin(10.0 * params2 * (t + time)) * 0.1 + 0.02 * sin(5.0 * params2.yxz * (4.0 * t - time));'
+))
+
 for (let i = 0; i < 10; i++) {
   const curve = curveManager.use()
-  const v = sphereRandom()
-  curve.params1.x = 0
-  curve.params1.y = 0
-  curve.params1.z = 0
-  curve.params2.x = v.x
-  curve.params2.y = v.y
-  curve.params2.z = v.z
+  const a = sphereRandom()
+  const b = sphereRandom()
+  curve.params1.x = a.x
+  curve.params1.y = a.y
+  curve.params1.z = a.z
+  curve.params2.x = b.x
+  curve.params2.y = b.y
+  curve.params2.z = b.z
   curve.color.setRGB(0.6 * Math.random(), 0.6 * Math.random(), 1)
   curve.brightness0 = 0
   curve.brightness1 = 2
@@ -64,8 +69,7 @@ function animate() {
   renderer.autoClear = false
   renderer.clearColor()
   renderer.clearDepth()
-  for (const c of curveManager.curves) c.time = t/4
-  curveManager.update()
+  curveManager.update(t)
   renderer.render(scene, camera)
   renderer.setRenderTarget(null)
   renderer.render(targetRenderScene, targetRenderCamera)

@@ -73,7 +73,6 @@ export class Curve {
   brightness0 = 0
   brightness1 = 0
   brightness2 = 0
-  time = 0
   ra = 0
   rb = 0
   mesh: THREE.Mesh
@@ -91,10 +90,10 @@ export class Curve {
       depthWrite: false
     })
   }
-  update() {
+  update(time: number) {
     this.uniforms.ra.value = this.ra
     this.uniforms.rb.value = this.rb
-    this.uniforms.time.value = this.time
+    this.uniforms.time.value = time
     this.uniforms.brightness0.value = this.brightness0
     this.uniforms.brightness1.value = this.brightness1
     this.uniforms.brightness2.value = this.brightness2
@@ -154,7 +153,7 @@ export class CurveManager {
     this.scene.add(curve.mesh)
     return curve
   }
-  update() {
-    for (const curve of this.curves) curve.update()
+  update(time: number) {
+    for (const curve of this.curves) curve.update(time)
   }
 }
