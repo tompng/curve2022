@@ -2,7 +2,9 @@ import { Mesh } from 'three'
 import * as THREE from 'three'
 import { CurveManager, createVertexShader } from './tube'
 import { createSnow } from './snow'
+import { GravitySensor } from './sensor'
 
+const sensor = new GravitySensor()
 function randomSign(): -1 | 1 {
   return Math.random() < 0.5 ? -1 : 1
 }
@@ -24,6 +26,7 @@ function resetSize() {
 }
 resetSize()
 document.body.appendChild(renderer.domElement)
+document.body.appendChild(sensor.button)
 const targetRenderMesh = new Mesh(new THREE.PlaneGeometry(), new THREE.MeshBasicMaterial({ map: target.texture }))
 const targetRenderScene = new THREE.Scene()
 const targetRenderCamera = new THREE.Camera()
@@ -121,16 +124,42 @@ for (let i = 0; i < 20; i++) {
 const snow = createSnow(512)
 scene.add(snow.points)
 
+let cameraZTheta = 0
+let cameraRotate = 0
+
 function animate() {
   requestAnimationFrame(animate)
+  if (sensor.available) {
+    // sensor.gravity.x = 1
+    // sensor.gravity.y = -1
+    // sensor.gravity.z = -4
+    // sensor.referenceGravity.x = 0
+    // sensor.referenceGravity.y = -1
+    // sensor.referenceGravity.z = -4
+    const { x, y, z } = sensor.gravity
+    const ref = sensor.referenceGravity
+    const refZTheta = Math.atan2(Math.hypot(ref.x, ref.y), -ref.z)
+    const gravityZTheta = Math.atan(Math.hypot(x, y) / (-z))
+    cameraZTheta = gravityZTheta - refZTheta
+    cameraZTheta = Math.max(-1, Math.min(cameraZTheta, 1))
+    const safeRatio = 1 - (1 - (x ** 2 + y ** 2) / (x ** 2 + y ** 2 + z ** 2)) ** 16
+    cameraRotate = -(Math.atan2(y, x) + Math.PI / 2) * safeRatio
+  }
   const t = performance.now() / 1000
   const zth = Math.sin(t)*0
   const distance = 1
   const th = t * 0.4
-  camera.position.x = distance * Math.cos(th) * Math.cos(zth)
-  camera.position.y = distance * Math.sin(th) * Math.cos(zth)
-  camera.position.z = distance * Math.sin(zth) / 4 + 0.7
-  camera.lookAt(new THREE.Vector3(0, 0, 0.7))
+  const positionX = distance * Math.cos(th) * Math.cos(zth)
+  const positionY = distance * Math.sin(th) * Math.cos(zth)
+  const positionZ = 0.7
+  const dirX = -Math.cos(th)
+  const dirY = -Math.sin(th)
+  const camDistance = 0.1
+  camera.position.x = positionX - dirX * camDistance * Math.cos(cameraZTheta)
+  camera.position.y = positionY - dirY * camDistance * Math.cos(cameraZTheta)
+  camera.position.z = positionZ - camDistance * Math.sin(cameraZTheta)
+  camera.lookAt(new THREE.Vector3(positionX, positionY, positionZ))
+  camera.rotateZ(cameraRotate)
   renderer.setRenderTarget(target)
   renderer.autoClear = false
   renderer.clearColor()
