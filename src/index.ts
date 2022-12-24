@@ -21,7 +21,7 @@ function resetSize() {
   const height = window.innerHeight
   renderer.setSize(width, height)
   target.setSize(width, height)
-  camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 100)
+  camera = new THREE.PerspectiveCamera(75, width / height, 0.01, 20)
   camera.up = new THREE.Vector3(0, 0, 1)
 }
 resetSize()
@@ -131,7 +131,28 @@ const bird = {
   zTheta: 0,
   position: { x: -1, y: 0, z: 0.7 }
 }
-
+const birdUniforms = {
+  time: { value: 0 }
+}
+const box = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1, 4, 4, 4), new THREE.ShaderMaterial({
+  uniforms: birdUniforms,
+  vertexShader: `
+  uniform float time;
+  void main() {
+    vec3 pos = position * vec3(0.01, 0.01, 0.002) + vec3(0,0,(sin(39.0 * time) * 0.8 + 0.3) * abs(position.y) * 0.01);
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1);
+  }
+  `,
+  fragmentShader: `
+  void main() {
+    gl_FragColor = vec4(0.5);
+  }
+  `,
+  blending: THREE.AdditiveBlending,
+  depthWrite: false
+}))
+box.visible = false
+scene.add(box)
 let prevTime = 0
 function animate() {
   requestAnimationFrame(animate)
@@ -153,7 +174,7 @@ function animate() {
     cameraZTheta = Math.max(-1, Math.min(cameraZTheta, 1))
     const safeRatio = 1 - (1 - (x ** 2 + y ** 2) / (x ** 2 + y ** 2 + z ** 2)) ** 16
     cameraRotate = -(Math.atan2(y, x) + Math.PI / 2) * safeRatio
-    const speed = 0.1
+    const speed = 0.2
     bird.position.x += dt * speed * Math.cos(bird.xyDir) * Math.cos(bird.zTheta)
     bird.position.y += dt * speed * Math.sin(bird.xyDir) * Math.cos(bird.zTheta)
     bird.position.z += dt * speed * Math.sin(bird.zTheta)
@@ -165,6 +186,16 @@ function animate() {
       bird.position.x *= scale
       bird.position.y *= scale
     }
+    box.visible = true
+    box.position.x = bird.position.x
+    box.position.y = bird.position.y
+    box.position.z = bird.position.z
+    box.matrixWorldNeedsUpdate = true
+    box.rotation.x = 0
+    box.rotation.y = 0
+    box.rotation.z = 0
+    box.rotateOnWorldAxis(new THREE.Vector3(1, 0, 0), Math.max(-1,Math.min(-cameraRotate,1)))
+    box.rotateOnWorldAxis(new THREE.Vector3(0, 0, 1), bird.xyDir)
   } else {
     const th = t * 0.4
     bird.position.x = Math.cos(th)
@@ -187,6 +218,7 @@ function animate() {
   treeTrunk.update(t)
   ground.update(t)
   snow.update(t)
+  birdUniforms.time.value = t
   renderer.render(scene, camera)
   renderer.setRenderTarget(null)
   renderer.render(targetRenderScene, targetRenderCamera)
