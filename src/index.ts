@@ -35,7 +35,7 @@ window.onresize = () => {
   }, 200)
 }
 
-const curveManager = new CurveManager(scene, createVertexShader(`
+const treeLeaf = new CurveManager(scene, createVertexShader(`
   float th = 8.0 * (2.0 + params1.x) * t + 0.3 * params1.y * time;
   vec3 gpos = 0.2 * vec3(
     vec2(cos(th), sin(th)) * (1.0 + 0.2 * sin((12.0 + 7.0 * params1.y) * t + 0.3 * params1.z * time)),
@@ -50,8 +50,15 @@ const treeTrunk = new CurveManager(scene, createVertexShader(`
     t
   );
 `))
+const star = new CurveManager(scene, createVertexShader(`
+  vec3 gpos = sin(params1 * (32.0 * t + 16.0 * time)) + 0.1 * sin(params2 * (24.0 * t + 13.0 * time));
+  gpos /= 0.5 + length(gpos);
+  gpos *= 0.1;
+  gpos.z += 1.2;
+`))
+
 for (let i = 0; i < 20; i++) {
-  const curve = curveManager.use()
+  const curve = treeLeaf.use()
   curve.color.setRGB(0.8 * Math.random(), 1, 0.8 * Math.random())
   curve.brightness0 = 0
   curve.brightness1 = 8
@@ -69,6 +76,16 @@ for (let i = 0; i < 10; i++) {
   curve.rb = 0.005
 }
 
+for (let i = 0; i < 3; i++) {
+  const curve = star.use()
+  curve.color.setRGB(1, 1, 0.6 * Math.random())
+  curve.brightness0 = 0
+  curve.brightness1 = 32
+  curve.brightness2 = -32
+  curve.ra = 0.01
+  curve.rb = 0.01
+}
+
 function animate() {
   requestAnimationFrame(animate)
   const t = performance.now() / 1000
@@ -83,7 +100,8 @@ function animate() {
   renderer.autoClear = false
   renderer.clearColor()
   renderer.clearDepth()
-  curveManager.update(t)
+  star.update(t)
+  treeLeaf.update(t)
   treeTrunk.update(t)
   renderer.render(scene, camera)
   renderer.setRenderTarget(null)
