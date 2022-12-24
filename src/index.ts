@@ -1,6 +1,7 @@
 import { Mesh } from 'three'
 import * as THREE from 'three'
 import { CurveManager, createVertexShader } from './tube'
+import { createSnow } from './snow'
 
 function randomSign(): -1 | 1 {
   return Math.random() < 0.5 ? -1 : 1
@@ -117,6 +118,8 @@ for (let i = 0; i < 20; i++) {
   curve.ra = 0.02
   curve.rb = 0.02
 }
+const snow = createSnow(512)
+scene.add(snow.points)
 
 function animate() {
   requestAnimationFrame(animate)
@@ -136,6 +139,7 @@ function animate() {
   treeLeaf.update(t)
   treeTrunk.update(t)
   ground.update(t)
+  snow.update(t)
   renderer.render(scene, camera)
   renderer.setRenderTarget(null)
   renderer.render(targetRenderScene, targetRenderCamera)
