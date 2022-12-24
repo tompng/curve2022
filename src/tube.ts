@@ -89,6 +89,17 @@ export class Curve {
       blending: THREE.AdditiveBlending,
       depthWrite: false
     })
+    this.randomize()
+  }
+  randomize() {
+    const a = sphereRandom()
+    const b = sphereRandom()
+    this.params1.x = a.x
+    this.params1.y = a.y
+    this.params1.z = a.z
+    this.params2.x = b.x
+    this.params2.y = b.y
+    this.params2.z = b.z
   }
   update(time: number) {
     this.uniforms.ra.value = this.ra
