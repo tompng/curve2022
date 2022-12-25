@@ -4,6 +4,7 @@ export class GravitySensor {
   referenceGravity = { x: 0, y: -1, z: -1 }
   initialized = false
   button: HTMLElement
+  onreset?: () => void
   smoothGravity = {
     x: 0, y: 0, z: 0,
     ax: 0, ay: 0, az: 0,
@@ -62,11 +63,12 @@ export class GravitySensor {
     this.button.style.display = 'block'
     this.button.onclick = () => {
       this.referenceGravity = { ...this.gravity }
+      this.onreset?.()
     }
   }
   createButton() {
     const button = document.createElement('a')
-    button.textContent = 'Gravity On'
+    button.textContent = 'Gyro On'
     button.style.cssText = `
       position: fixed;
       height: 8vmin;
@@ -77,6 +79,10 @@ export class GravitySensor {
       color: black;
       text-align: center;
       line-height: 8vmin;
+      padding: 0 2vmin;
+      border-radius: 1vmin;
+      cursor: pointer;
+      opacity: 0.8;
     `
     return button
   }

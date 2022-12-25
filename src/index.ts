@@ -21,7 +21,7 @@ function resetSize() {
   const height = window.innerHeight
   renderer.setSize(width, height)
   target.setSize(width, height)
-  camera = new THREE.PerspectiveCamera(75, width / height, 0.01, 20)
+  camera = new THREE.PerspectiveCamera(75, width / height, 0.001, 32)
   camera.up = new THREE.Vector3(0, 0, 1)
 }
 resetSize()
@@ -131,11 +131,16 @@ const bird = {
   zTheta: 0,
   position: { x: -1, y: 0, z: 0.7 }
 }
-const birdUniforms = {
+sensor.onreset = () => {
+  bird.xyDir = 0
+  bird.zTheta = 0
+  bird.position = { x: -1, y: 0, z: 0.7 }
+}
+const timeUniforms = {
   time: { value: 0 }
 }
 const box = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1, 4, 4, 4), new THREE.ShaderMaterial({
-  uniforms: birdUniforms,
+  uniforms: timeUniforms,
   vertexShader: `
   uniform float time;
   void main() {
@@ -152,6 +157,37 @@ const box = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1, 4, 4, 4), new THREE.Sh
   depthWrite: false
 }))
 box.visible = false
+const plane = new THREE.Mesh(
+  new THREE.PlaneGeometry(32, 32),
+  new THREE.ShaderMaterial({
+    uniforms: timeUniforms,
+    vertexShader: `
+    varying vec2 coord;
+    void main() {
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1);
+      coord = position.xy;
+    }
+    `,
+    fragmentShader: `
+    varying vec2 coord;
+    uniform float time;
+    void main() {
+      vec2 xy = coord / 16.0;
+      float r2 = dot(xy, xy);
+      float r = sqrt(r2);
+      float c = clamp(1.0 - r2, 0.0, 1.0);
+      float c2 = c * c;
+      float a = max(0.0, 16.0 * sin(16.0 * r - 4.0 * time) - 15.0);
+      float w = r * a * a;
+      gl_FragColor = vec4(0.1 * vec3(c2, c2, 1) * c2 + 0.1 * c2 * vec3(w), 1);
+    }
+    `,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending
+  })
+)
+plane.position.z = -0.01
+scene.add(plane)
 scene.add(box)
 let prevTime = 0
 function animate() {
@@ -159,13 +195,16 @@ function animate() {
   const t = performance.now() / 1000
   const dt = Math.max(0, Math.min(t - prevTime, 0.1))
   prevTime = t
-  if (sensor.available) {
-    // sensor.smoothGravity.x = 0.4
-    // sensor.smoothGravity.y = -1
-    // sensor.smoothGravity.z = -4
-    // sensor.referenceGravity.x = 0
-    // sensor.referenceGravity.y = -1
-    // sensor.referenceGravity.z = -4
+  const sensorDebug = location.hash?.match(/debug/)
+  if (sensor.available || sensorDebug) {
+    if (sensorDebug) {
+      sensor.smoothGravity.x = 0.1
+      sensor.smoothGravity.y = -1
+      sensor.smoothGravity.z = -4
+      sensor.referenceGravity.x = 0
+      sensor.referenceGravity.y = -1
+      sensor.referenceGravity.z = -4
+    }
     const { x, y, z } = sensor.smoothGravity
     const ref = sensor.referenceGravity
     const refZTheta = Math.atan2(Math.hypot(ref.x, ref.y), -ref.z)
@@ -175,14 +214,15 @@ function animate() {
     const safeRatio = 1 - (1 - (x ** 2 + y ** 2) / (x ** 2 + y ** 2 + z ** 2)) ** 16
     cameraRotate = -(Math.atan2(y, x) + Math.PI / 2) * safeRatio
     const speed = 0.2
+    bird.zTheta = cameraZTheta
     bird.position.x += dt * speed * Math.cos(bird.xyDir) * Math.cos(bird.zTheta)
     bird.position.y += dt * speed * Math.sin(bird.xyDir) * Math.cos(bird.zTheta)
     bird.position.z += dt * speed * Math.sin(bird.zTheta)
     bird.position.z = Math.max(0.1, Math.min(bird.position.z, 4))
     const r = Math.hypot(bird.position.x, bird.position.y)
     bird.xyDir += cameraRotate * dt / 2
-    if (r > 16) {
-      const scale = 16 / r
+    if (r > 8) {
+      const scale = 8 / r
       bird.position.x *= scale
       bird.position.y *= scale
     }
@@ -218,7 +258,7 @@ function animate() {
   treeTrunk.update(t)
   ground.update(t)
   snow.update(t)
-  birdUniforms.time.value = t
+  timeUniforms.time.value = t
   renderer.render(scene, camera)
   renderer.setRenderTarget(null)
   renderer.render(targetRenderScene, targetRenderCamera)
