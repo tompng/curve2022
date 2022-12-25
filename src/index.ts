@@ -186,7 +186,6 @@ const plane = new THREE.Mesh(
     blending: THREE.AdditiveBlending
   })
 )
-plane.position.z = -0.01
 scene.add(plane)
 scene.add(box)
 let prevTime = 0
@@ -220,7 +219,7 @@ function animate() {
     bird.position.z += dt * speed * Math.sin(bird.zTheta)
     bird.position.z = Math.max(0.1, Math.min(bird.position.z, 4))
     const r = Math.hypot(bird.position.x, bird.position.y)
-    bird.xyDir += cameraRotate * dt / 2
+    bird.xyDir += cameraRotate * dt
     if (r > 8) {
       const scale = 8 / r
       bird.position.x *= scale
@@ -235,6 +234,7 @@ function animate() {
     box.rotation.y = 0
     box.rotation.z = 0
     box.rotateOnWorldAxis(new THREE.Vector3(1, 0, 0), Math.max(-1,Math.min(-cameraRotate,1)))
+    box.rotateOnWorldAxis(new THREE.Vector3(0, 1, 0), -bird.zTheta)
     box.rotateOnWorldAxis(new THREE.Vector3(0, 0, 1), bird.xyDir)
   } else {
     const th = t * 0.4

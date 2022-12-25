@@ -144,6 +144,7 @@ export function cylinderGeometry(lsections: number, rsections: number) {
   }
   geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(positions), 3))
   geometry.setIndex(new THREE.BufferAttribute(new Uint16Array(indices), 1))
+  geometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(0), 1024) // disable frustum culling
   return geometry
 }
 
